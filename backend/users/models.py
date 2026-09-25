@@ -1,7 +1,10 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 class Role(models.Model):
+    # Add this inside each class
+    public_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     # Django automatically generates an auto-incrementing primary key 'id' (role_id)
     role_name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
@@ -12,6 +15,8 @@ class Role(models.Model):
         return self.role_name
 
 class User(AbstractUser):
+    # Add this inside each class
+    public_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     # AbstractUser already provides 'username', 'email', 'password', and 'is_active'
     # Here we map the remaining fields from the ERD
     role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, related_name='users')
@@ -22,6 +27,8 @@ class User(AbstractUser):
         return self.username
 
 class Admin(models.Model):
+    # Add this inside each class
+    public_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     # Django auto-generates 'id' which serves as the admin_id
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='admin_profile')
     role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True)
@@ -31,6 +38,8 @@ class Admin(models.Model):
 
 
 class Employee(models.Model):
+    # Add this inside each class
+    public_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     # Django auto-generates 'id' which serves as the employee_id
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='employee_profile')
     first_name = models.CharField(max_length=100)

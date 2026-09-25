@@ -1,29 +1,31 @@
 from rest_framework import permissions
 
-class IsAdminRole(permissions.BasePermission):
-    """
-    Allows access only to users with the 'Admin' role (or superusers).
-    """
+class IsSystemAdmin(permissions.BasePermission):
+    """Global access for master setups, users, and system configs."""
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-            
-        # Superusers automatically get access, otherwise check the role name
         if request.user.is_superuser:
             return True
-            
-        return request.user.role and request.user.role.role_name == 'Admin'
+        return request.user.role and request.user.role.role_name == 'System Admin'
 
-
-class IsEmployeeRole(permissions.BasePermission):
-    """
-    Allows access to users with the 'Employee' role.
-    """
+class IsHRManager(permissions.BasePermission):
+    """Access for employee lifecycles, departments, and organization hierarchy."""
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-            
-        if request.user.is_superuser:
-            return True
-            
+        return request.user.role and request.user.role.role_name == 'HR Manager'
+
+class IsProjectManager(permissions.BasePermission):
+    """Access for assigned team members, projects, tasks, and leave approvals."""
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        return request.user.role and request.user.role.role_name == 'Department / Project Manager'
+
+class IsEmployee(permissions.BasePermission):
+    """Self-service access for daily tasks, own leaves, and assets."""
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
         return request.user.role and request.user.role.role_name == 'Employee'
