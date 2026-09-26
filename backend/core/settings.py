@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'users',  # Custom app for user management
     'rest_framework',
     'rest_framework_simplejwt',
+    'projects',
 ]
 
 MIDDLEWARE = [
