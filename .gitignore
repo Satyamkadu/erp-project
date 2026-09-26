@@ -1,5 +1,15 @@
 node_modules/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.db
 .env
 venv/
+.venv/
+.vscode/
+db.sqlite3
+
+# Logs
+*.log
+audit.log
