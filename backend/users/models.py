@@ -48,9 +48,9 @@ class Employee(models.Model):
     phone = models.CharField(max_length=20, blank=True, null=True)
     hire_date = models.DateField()
     employment_status = models.CharField(max_length=50, default='Active')
-
-    # Note: We will add the Foreign Keys for department_id and team_id later 
-    # when the Department and Team apps are actually created.
+    job_title = models.CharField(max_length=200, blank=True, null=True)
+    department = models.ForeignKey('organization.Department', on_delete=models.SET_NULL, null=True, blank=True, related_name='employees')
+    manager = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='subordinates')
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
