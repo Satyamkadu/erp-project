@@ -24,11 +24,12 @@ class TaskViewSet(viewsets.ModelViewSet):
         user = self.request.user
         queryset = Task.objects.all().order_by('-created_at')
 
-        # Admins and Project Managers see everything
-        if user.role and user.role.role_name in ['System Admin', 'Department / Project Manager']:
+        if user.is_superuser or (
+            user.role and
+            user.role.role_name in ['System Admin', 'Department / Project Manager']
+        ):
             return queryset
 
-        # Standard employees only see their own assigned tasks
         if hasattr(user, 'employee_profile'):
             return queryset.filter(assigned_to=user.employee_profile)
 
