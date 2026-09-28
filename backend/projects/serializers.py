@@ -6,8 +6,11 @@ from .models import Project, Task
 
 class ProjectSerializer(serializers.ModelSerializer):
     manager_details = EmployeeSerializer(source='manager', read_only=True)
-    manager = serializers.PrimaryKeyRelatedField(
-        queryset=Employee.objects.all(), write_only=True
+
+    manager = serializers.SlugRelatedField(
+        slug_field='public_id',
+        queryset=Employee.objects.all(),
+        write_only=True
     )
 
     class Meta:
@@ -18,14 +21,27 @@ class ProjectSerializer(serializers.ModelSerializer):
             'start_date', 'end_date', 'status',
             'created_at', 'updated_at',
         ]
+        read_only_fields = [
+            'public_id',
+            'manager_details',
+            'created_at',
+            'updated_at',
+        ]
 
 
 class TaskSerializer(serializers.ModelSerializer):
     assigned_to_details = EmployeeSerializer(source='assigned_to', read_only=True)
-    assigned_to = serializers.PrimaryKeyRelatedField(
-        queryset=Employee.objects.all(), write_only=True
+
+    assigned_to = serializers.SlugRelatedField(
+        slug_field='public_id',
+        queryset=Employee.objects.all(),
+        write_only=True
     )
-    project = serializers.PrimaryKeyRelatedField(queryset=Project.objects.all())
+
+    project = serializers.SlugRelatedField(
+        slug_field='public_id',
+        queryset=Project.objects.all()
+    )
 
     class Meta:
         model = Task
@@ -35,3 +51,10 @@ class TaskSerializer(serializers.ModelSerializer):
             'title', 'description', 'deadline', 'status',
             'created_at', 'updated_at',
         ]
+        read_only_fields = [
+            'public_id',
+            'assigned_to_details',
+            'created_at',
+            'updated_at',
+        ]
+

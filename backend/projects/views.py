@@ -7,6 +7,7 @@ from .serializers import ProjectSerializer, TaskSerializer
 class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all().order_by('-created_at')
     serializer_class = ProjectSerializer
+    lookup_field = 'public_id'
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
@@ -18,11 +19,15 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
 class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
+    lookup_field = 'public_id'
     permission_classes = [permissions.IsAuthenticated, (IsEmployee | IsProjectManager | IsSystemAdmin)]
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Task.objects.all().order_by('-created_at')
+        queryset = Task.objects.select_related(
+            'project',
+            'assigned_to'
+        ).order_by('-created_at')
 
         if user.is_superuser or (
             user.role and

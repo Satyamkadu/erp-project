@@ -1,6 +1,5 @@
 import uuid
 from django.db import models
-from users.models import Employee
 
 
 class Project(models.Model):
@@ -14,8 +13,11 @@ class Project(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     manager = models.ForeignKey(
-        Employee, on_delete=models.SET_NULL, null=True, related_name='managed_projects'
-    )
+    'users.Employee',
+    on_delete=models.SET_NULL,
+    null=True,
+    related_name='managed_projects'
+)
     start_date = models.DateField()
     end_date = models.DateField(blank=True, null=True)
     status = models.CharField(
@@ -38,8 +40,11 @@ class Task(models.Model):
     public_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks')
     assigned_to = models.ForeignKey(
-        Employee, on_delete=models.SET_NULL, null=True, related_name='tasks'
-    )
+    'users.Employee',
+    on_delete=models.SET_NULL,
+    null=True,
+    related_name='tasks'
+)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     deadline = models.DateField(blank=True, null=True)
