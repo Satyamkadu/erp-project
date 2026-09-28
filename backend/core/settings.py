@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'organization',  # Custom app for organization management
     'rest_framework',
     'rest_framework_simplejwt',
+    'projects',
 ]
 
 MIDDLEWARE = [
