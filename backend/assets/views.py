@@ -17,10 +17,7 @@ from users.permissions import IsSystemAdminOrHRManager
 class AssetPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
-            return (
-                request.user
-                and request.user.is_authenticated
-            )
+            return request.user and request.user.is_authenticated
 
         return IsSystemAdminOrHRManager().has_permission(
             request,
@@ -36,10 +33,37 @@ class AssetViewSet(viewsets.ModelViewSet):
 
 
 class AssetAllocationViewSet(viewsets.ModelViewSet):
-    queryset = AssetAllocation.objects.all().order_by('-id')
+    queryset = AssetAllocation.objects.select_related(
+        'asset',
+        'employee'
+    ).order_by('-id')
+
     serializer_class = AssetAllocationSerializer
     permission_classes = [AssetPermission]
     lookup_field = 'public_id'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        user = self.request.user
+
+        role_name = getattr(
+            getattr(user, 'role', None),
+            'role_name',
+            None
+        )
+
+        # System Admin and HR Manager can see all allocations
+        if user.is_superuser or role_name in [
+            'System Admin',
+            'HR Manager'
+        ]:
+            return queryset
+
+        # Normal employees can only see their own allocations
+        return queryset.filter(
+            employee__user=user
+        )
 
     @transaction.atomic
     def perform_create(self, serializer):
@@ -56,11 +80,11 @@ class AssetAllocationViewSet(viewsets.ModelViewSet):
             status=AssetAllocation.Status.ALLOCATED
         )
 
-        # Change asset status
+        # Update asset status
         asset.status = Asset.Status.ALLOCATED
         asset.save(update_fields=['status'])
 
-        # Create history entry
+        # Create history record
         AssetHistory.objects.create(
             asset=asset,
             event_type='Allocated',
@@ -98,7 +122,10 @@ class AssetAllocationViewSet(viewsets.ModelViewSet):
 
 
 class AssetHistoryViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = AssetHistory.objects.all().order_by('-event_date')
+    queryset = AssetHistory.objects.select_related(
+        'asset'
+    ).order_by('-event_date')
+
     serializer_class = AssetHistorySerializer
     permission_classes = [permissions.IsAuthenticated]
     lookup_field = 'public_id'
