@@ -3,6 +3,9 @@ from rest_framework import viewsets, permissions
 from apps.users.permissions import IsSystemAdmin, IsProjectManager
 from .models import Project, Task
 from .serializers import ProjectSerializer, TaskSerializer
+from django.shortcuts import get_object_or_404
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -31,6 +34,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if role_name == 'Employee':
             return queryset.filter(
                 tasks__assigned_to__user=user,
+                tasks__is_deleted=False,          # <-- new
                 tasks__status__in=[
                     Task.Status.TODO,
                     Task.Status.IN_PROGRESS,
@@ -41,7 +45,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return queryset.none()
 
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+        if self.action in ['trash', 'restore']:
+            permission_classes = [permissions.IsAuthenticated, IsSystemAdmin]
+        elif self.action in ['create', 'update', 'partial_update', 'destroy']:
             permission_classes = [permissions.IsAuthenticated, (IsSystemAdmin | IsProjectManager)]
         else:
             permission_classes = [permissions.IsAuthenticated]
@@ -57,7 +63,21 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_destroy(self, instance):
-        instance.delete()
+        instance.delete(user=self.request.user)   # <-- soft delete + cascade to tasks
+
+    @action(detail=False, methods=['get'])
+    def trash(self, request):
+        qs = Project.all_objects.filter(is_deleted=True).select_related(
+            'manager', 'manager__user', 'manager__user__role', 'manager__department',
+        ).order_by('-deleted_at')
+        return Response(self.get_serializer(qs, many=True).data)
+
+    @action(detail=True, methods=['post'])
+    def restore(self, request, public_id=None):
+        project = get_object_or_404(Project.all_objects, public_id=public_id, is_deleted=True)
+        with transaction.atomic():
+            project.restore()
+        return Response(self.get_serializer(project).data)
 
 
 class TaskPermission(permissions.BasePermission):
@@ -151,4 +171,4 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_destroy(self, instance):
-        instance.delete()
+        instance.delete(user=self.request.user)
