@@ -26,7 +26,7 @@ class AllObjectsManager(models.Manager):
 
 
 class SoftDeleteModel(models.Model):
-    is_deleted = models.BooleanField(default=False, db_index=True)
+    is_deleted = models.BooleanField(default=False, db_default=False, db_index=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
     deleted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
