@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'projects',
     'assets',
+    'apps.leave.apps.LeaveConfig',
 
 ]
 
@@ -90,8 +91,8 @@ DATABASES = {
         'NAME': os.environ.get('POSTGRES_DB'),
         'USER': os.environ.get('POSTGRES_USER'),
         'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
-        'HOST': 'localhost', # Connects to the forwarded port from Docker
-        'PORT': '5432',
+        'HOST': os.environ.get('POSTGRES_HOST'), # Connects to the forwarded port from Docker
+        'PORT': os.environ.get('POSTGRES_PORT'),
     }
 }
 

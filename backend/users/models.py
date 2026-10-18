@@ -20,6 +20,7 @@ class User(AbstractUser):
     # AbstractUser already provides 'username', 'email', 'password', and 'is_active'
     # Here we map the remaining fields from the ERD
     role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, related_name='users')
+    is_deleted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
