@@ -1,3 +1,4 @@
+
 from django.db import transaction
 from django.utils import timezone
 
@@ -23,7 +24,13 @@ class AssetPermission(permissions.BasePermission):
 
         if not request.user or not request.user.is_authenticated:
             return False
-        role_name = getattr(getattr(request.user, 'role', None), 'role_name', None)
+
+        role_name = getattr(
+            getattr(request.user, 'role', None),
+            'role_name',
+            None
+        )
+
         return request.user.is_superuser or role_name in ASSET_MANAGER_ROLES
 
 
@@ -34,9 +41,16 @@ class AssetViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Asset.objects.all().order_by('-id')
+        queryset = Asset.objects.filter(
+            is_deleted=False
+        ).order_by('-id')
 
-        role_name = getattr(getattr(user, 'role', None), 'role_name', None)
+        role_name = getattr(
+            getattr(user, 'role', None),
+            'role_name',
+            None
+        )
+
         if user.is_superuser or role_name in ASSET_MANAGER_ROLES:
             return queryset
 
@@ -55,7 +69,7 @@ class AssetViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_create(self, serializer):
-        serializer.save()
+        serializer.save(created_by=self.request.user)
 
     @transaction.atomic
     def perform_update(self, serializer):
@@ -64,7 +78,35 @@ class AssetViewSet(viewsets.ModelViewSet):
                 "Asset status cannot be changed directly. "
                 "Use the asset status or allocation endpoint."
             )
+
         serializer.save()
+
+    def perform_destroy(self, instance):
+        asset = Asset.objects.select_for_update().get(pk=instance.pk)
+
+        if not asset.is_deleted:
+            asset.is_deleted = True
+            asset.deleted_at = timezone.now()
+            asset.save(update_fields=['is_deleted', 'deleted_at'])
+
+    @action(detail=True, methods=['post'], url_path='restore')
+    @transaction.atomic
+    def restore(self, request, public_id=None):
+        asset = Asset.objects.select_for_update().filter(
+            public_id=public_id,
+            is_deleted=True
+        ).first()
+
+        if asset is None:
+            raise ValidationError(
+                'Deleted asset not found.'
+            )
+
+        asset.is_deleted = False
+        asset.deleted_at = None
+        asset.save(update_fields=['is_deleted', 'deleted_at'])
+
+        return Response(self.get_serializer(asset).data)
 
     @action(detail=True, methods=['patch'], url_path='status')
     @transaction.atomic
@@ -78,14 +120,18 @@ class AssetViewSet(viewsets.ModelViewSet):
             })
 
         new_status = request.data['status']
+
         if new_status not in Asset.Status.values:
             raise ValidationError({'status': 'Invalid asset status.'})
+
         if new_status == Asset.Status.ALLOCATED:
             raise ValidationError({
                 'status': 'Use the allocation endpoint to allocate an asset.'
             })
+
         if new_status == asset.status:
             return Response(self.get_serializer(asset).data)
+
         if asset.status == Asset.Status.ALLOCATED or AssetAllocation.objects.filter(
             asset=asset,
             status=AssetAllocation.Status.ALLOCATED,
@@ -97,12 +143,14 @@ class AssetViewSet(viewsets.ModelViewSet):
         old_status = asset.status
         asset.status = new_status
         asset.save(update_fields=['status'])
+
         AssetHistory.objects.create(
             asset=asset,
             event_type='Status Changed',
             event_date=timezone.now(),
             remarks=f"Status changed from {old_status} to {new_status}.",
         )
+
         return Response(self.get_serializer(asset).data)
 
 
@@ -118,7 +166,6 @@ class AssetAllocationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-
         user = self.request.user
 
         role_name = getattr(
@@ -127,7 +174,6 @@ class AssetAllocationViewSet(viewsets.ModelViewSet):
             None
         )
 
-        # System Admin and HR Manager can see all allocations
         if user.is_superuser or role_name in ASSET_MANAGER_ROLES:
             return queryset
 
@@ -137,12 +183,22 @@ class AssetAllocationViewSet(viewsets.ModelViewSet):
             'HR Manager',
         ]:
             return queryset.filter(employee__user=user)
+
         return queryset.none()
 
     @transaction.atomic
     def perform_create(self, serializer):
         requested_asset = serializer.validated_data['asset']
-        asset = Asset.objects.select_for_update().get(pk=requested_asset.pk)
+
+        asset = Asset.objects.select_for_update().filter(
+            pk=requested_asset.pk,
+            is_deleted=False
+        ).first()
+
+        if asset is None:
+            raise ValidationError(
+                "This asset does not exist or has been deleted."
+            )
 
         if asset.status != Asset.Status.AVAILABLE:
             raise ValidationError(
@@ -171,7 +227,11 @@ class AssetAllocationViewSet(viewsets.ModelViewSet):
             pk=serializer.instance.pk
         )
         serializer.instance = allocation
-        was_allocated = allocation.status == AssetAllocation.Status.ALLOCATED
+
+        was_allocated = (
+            allocation.status == AssetAllocation.Status.ALLOCATED
+        )
+
         allocation = serializer.save()
 
         if (
@@ -180,19 +240,20 @@ class AssetAllocationViewSet(viewsets.ModelViewSet):
         ):
             if allocation.return_date is None:
                 allocation.return_date = timezone.now().date()
+
             allocation.status = AssetAllocation.Status.RETURNED
-            allocation.save(
-                update_fields=['return_date', 'status']
-            )
+            allocation.save(update_fields=['return_date', 'status'])
 
             if was_allocated:
                 asset = Asset.objects.select_for_update().get(
                     pk=allocation.asset_id
                 )
+
                 other_active_allocations = AssetAllocation.objects.filter(
                     asset=asset,
                     status=AssetAllocation.Status.ALLOCATED,
                 ).exclude(pk=allocation.pk)
+
                 if not other_active_allocations.exists():
                     asset.status = Asset.Status.AVAILABLE
                     asset.save(update_fields=['status'])
@@ -210,17 +271,21 @@ class AssetAllocationViewSet(viewsets.ModelViewSet):
         allocation = AssetAllocation.objects.select_for_update().get(
             pk=instance.pk
         )
+
         if allocation.status == AssetAllocation.Status.ALLOCATED:
             asset = Asset.objects.select_for_update().get(
                 pk=allocation.asset_id
             )
+
             other_active_allocations = AssetAllocation.objects.filter(
                 asset=asset,
                 status=AssetAllocation.Status.ALLOCATED,
             ).exclude(pk=allocation.pk)
+
             if not other_active_allocations.exists():
                 asset.status = Asset.Status.AVAILABLE
                 asset.save(update_fields=['status'])
+
             AssetHistory.objects.create(
                 asset=asset,
                 employee=allocation.employee,
@@ -228,6 +293,7 @@ class AssetAllocationViewSet(viewsets.ModelViewSet):
                 event_date=timezone.now(),
                 remarks=f"Allocation deleted by {self.request.user}."
             )
+
         allocation.delete()
 
 
@@ -238,18 +304,26 @@ class AssetHistoryViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+
         queryset = AssetHistory.objects.select_related(
             'asset',
             'employee',
         ).order_by('-event_date')
-        role_name = getattr(getattr(user, 'role', None), 'role_name', None)
+
+        role_name = getattr(
+            getattr(user, 'role', None),
+            'role_name',
+            None
+        )
 
         if user.is_superuser or role_name in ASSET_MANAGER_ROLES:
             return queryset
+
         if role_name in [
             'Employee',
             'Department / Project Manager',
             'HR Manager',
         ]:
             return queryset.filter(employee__user=user)
+
         return queryset.none()

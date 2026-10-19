@@ -1,4 +1,6 @@
+
 import uuid
+from django.conf import settings
 from django.db import models
 
 
@@ -17,13 +19,9 @@ class Asset(models.Model):
         unique=True
     )
 
-    asset_name = models.CharField(
-        max_length=200
-    )
+    asset_name = models.CharField(max_length=200)
 
-    category = models.CharField(
-        max_length=100
-    )
+    category = models.CharField(max_length=100)
 
     serial_number = models.CharField(
         max_length=200,
@@ -41,6 +39,26 @@ class Asset(models.Model):
         max_length=20,
         choices=Status.choices,
         default=Status.AVAILABLE
+    )
+
+    # Soft delete fields
+    is_deleted = models.BooleanField(
+        default=False,
+        db_index=True
+    )
+
+    deleted_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    # Track the user who created the asset
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_assets'
     )
 
     def __str__(self):
@@ -110,9 +128,7 @@ class AssetHistory(models.Model):
         related_name='asset_history'
     )
 
-    event_type = models.CharField(
-        max_length=100
-    )
+    event_type = models.CharField(max_length=100)
 
     event_date = models.DateTimeField()
 
