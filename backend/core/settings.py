@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'projects',
     'assets',
     'apps.leave.apps.LeaveConfig',
+    "apps.attendance.apps.AttendanceConfig",
 
 ]
 
