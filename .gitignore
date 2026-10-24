@@ -1,4 +1,4 @@
-node_modules/
+#backend
 __pycache__/
 *.pyc
 *.pyo
@@ -8,7 +8,18 @@ __pycache__/
 .venv/
 .vscode/
 db.sqlite3
-frontend/
+
+
+
+
 # Logs
 *.log
 audit.log
+
+#frontend
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+endpoint-tester/

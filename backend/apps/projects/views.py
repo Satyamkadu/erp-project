@@ -1,6 +1,6 @@
 from django.db import transaction
 from rest_framework import viewsets, permissions
-from apps.users.permissions import IsSystemAdmin, IsProjectManager
+from apps.utils.permissions import IsProjectManager, IsSystemAdmin
 from .models import Project, Task
 from .serializers import ProjectSerializer, TaskSerializer
 
