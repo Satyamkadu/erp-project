@@ -45,7 +45,7 @@ for app_label in TARGET_APPS:
 
 # 2. AST SCANNER FOR VIEWS: N+1 Queries, Atomic Transactions, lookup_field
 print("🔍 [2/4] Auditing Views (N+1 Queries, Atomic Transactions, lookup_field)...")
-base_dir = Path(__file__).resolve().parent
+base_dir = Path(__file__).resolve().parent / "apps"
 
 for app_label in TARGET_APPS:
     views_path = base_dir / app_label / "views.py"
