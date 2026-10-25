@@ -1,6 +1,7 @@
 from django.db import transaction
-from rest_framework import viewsets, permissions
+from rest_framework import permissions
 from apps.utils.permissions import IsProjectManager, IsSystemAdmin
+from apps.utils.views import AuditModelViewSet
 from .models import Project, Task
 from .serializers import ProjectSerializer, TaskSerializer
 from django.shortcuts import get_object_or_404
@@ -8,13 +9,13 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 
-class ProjectViewSet(viewsets.ModelViewSet):
+class ProjectViewSet(AuditModelViewSet):
     serializer_class = ProjectSerializer
-    lookup_field = 'public_id'
 
     def get_queryset(self):
         user = self.request.user
         queryset = Project.objects.select_related(
+            'created_by',
             'manager',
             'manager__user',
             'manager__user__role',
@@ -53,22 +54,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
             permission_classes = [permissions.IsAuthenticated]
         return [p() for p in permission_classes]
 
-    @transaction.atomic
-    def perform_create(self, serializer):
-        serializer.save()
-
-    @transaction.atomic
-    def perform_update(self, serializer):
-        serializer.save()
-
-    @transaction.atomic
-    def perform_destroy(self, instance):
-        instance.delete(user=self.request.user)   # <-- soft delete + cascade to tasks
-
     @action(detail=False, methods=['get'])
     def trash(self, request):
         qs = Project.all_objects.filter(is_deleted=True).select_related(
-            'manager', 'manager__user', 'manager__user__role', 'manager__department',
+            'created_by', 'manager', 'manager__user', 'manager__user__role',
+            'manager__department',
         ).order_by('-deleted_at')
         return Response(self.get_serializer(qs, many=True).data)
 
@@ -129,14 +119,14 @@ class TaskPermission(permissions.BasePermission):
         return False
 
 
-class TaskViewSet(viewsets.ModelViewSet):
+class TaskViewSet(AuditModelViewSet):
     serializer_class = TaskSerializer
-    lookup_field = 'public_id'
     permission_classes = [TaskPermission]
 
     def get_queryset(self):
         user = self.request.user
         queryset = Task.objects.select_related(
+            'created_by',
             'project',
             'assigned_to',
             'assigned_to__user',
@@ -158,17 +148,3 @@ class TaskViewSet(viewsets.ModelViewSet):
             return queryset.filter(assigned_to=user.employee_profile)
 
         return queryset.none()
-
-    @transaction.atomic
-    def perform_create(self, serializer):
-        # Only Project Managers and System Admins can create tasks
-        serializer.save()
-
-    @transaction.atomic
-    def perform_update(self, serializer):
-        # Object-level permission already checked
-        serializer.save()
-
-    @transaction.atomic
-    def perform_destroy(self, instance):
-        instance.delete(user=self.request.user)
