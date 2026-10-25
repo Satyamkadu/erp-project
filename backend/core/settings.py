@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'apps.projects.apps.ProjectsConfig',
     'apps.assets.apps.AssetsConfig',
     'apps.leave.apps.LeaveConfig',
+    'apps.expense.apps.ExpenseConfig',
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
