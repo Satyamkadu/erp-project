@@ -1,7 +1,7 @@
-from django.db import transaction
 from rest_framework.permissions import IsAuthenticated
 
 from apps.utils.views import AuditModelViewSet
+from apps.users.models import Employee
 from .models import Expense, ExpenseCategory
 from .serializers import (
     ExpenseSerializer,
@@ -20,14 +20,21 @@ class ExpenseViewSet(AuditModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        try:
-            employee = self.request.user.employee_profile
-        except Exception:
-            return Expense.objects.none()
-
-        return Expense.objects.select_related(
+        queryset = Expense.objects.select_related(
             'created_by',
             'employee',
             'category',
             'approved_by',
-        ).filter(employee=employee).order_by('-submitted_at')
+        ).order_by('-submitted_at')
+
+        user = self.request.user
+        role_name = user.role.role_name if user.role else ''
+        if user.is_superuser or role_name in {'System Admin', 'HR Manager'}:
+            return queryset
+
+        try:
+            employee = user.employee_profile
+        except (AttributeError, Employee.DoesNotExist):
+            return queryset.none()
+
+        return queryset.filter(employee=employee)

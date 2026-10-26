@@ -52,6 +52,14 @@ MIDDLEWARE = [
     'core.middleware.AuditLoggingMiddleware',  # Custom middleware for audit logging
 ]
 
+CORS_ALLOW_CREDENTIALS = True
+
+# Also ensure your localhost frontend origin is explicitly allowed:
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
 ROOT_URLCONF = 'core.urls'
 
 TEMPLATES = [

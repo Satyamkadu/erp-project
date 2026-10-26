@@ -12,7 +12,12 @@ def is_hr_or_admin(user):
         user.is_authenticated
         and (
             user.is_superuser
-            or get_role_name(user) in {"admin", "hr"}
+            or get_role_name(user) in {
+                "admin",
+                "system admin",
+                "hr",
+                "hr manager",
+            }
         )
     )
 
@@ -20,7 +25,10 @@ def is_hr_or_admin(user):
 def is_manager(user):
     return (
         user.is_authenticated
-        and get_role_name(user) == "manager"
+        and get_role_name(user) in {
+            "manager",
+            "department / project manager",
+        }
     )
 
 

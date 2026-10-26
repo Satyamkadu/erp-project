@@ -63,6 +63,8 @@ class EmployeeViewSet(AuditModelViewSet):
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsSystemAdminOrHRManager()]
+        if self.action == 'me':
+            return [permissions.IsAuthenticated()]
         if self.action in ['list', 'retrieve']:
             return [permissions.IsAuthenticated()]
         return [IsSystemAdminOrHRManager()]

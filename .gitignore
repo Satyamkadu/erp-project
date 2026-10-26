@@ -9,10 +9,21 @@ __pycache__/
 venv/
 .vscode/
 db.sqlite3
-
-
-
+/backend/seed_credentials.txt
+/backend/audit_pr.py
+/endpoint-tester
 
 # Logs
 *.log
 audit.log
+
+# Frontend
+/node_modules/
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.vite/
+/frontend/coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
