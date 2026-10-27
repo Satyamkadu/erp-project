@@ -22,6 +22,7 @@ ALLOWED_HOSTS = []
 
 
 # Application definition
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -37,9 +38,12 @@ INSTALLED_APPS = [
     'apps.organization.apps.OrganizationConfig',
     'apps.projects.apps.ProjectsConfig',
     'apps.assets.apps.AssetsConfig',
+    'apps.analytics.apps.AnalyticsConfig',
     'apps.leave.apps.LeaveConfig',
     'apps.expense.apps.ExpenseConfig',
+
 ]
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -50,14 +54,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.AuditLoggingMiddleware',  # Custom middleware for audit logging
-]
-
-CORS_ALLOW_CREDENTIALS = True
-
-# Also ensure your localhost frontend origin is explicitly allowed:
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -201,3 +197,4 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
+CORS_ALLOW_CREDENTIALS = True
